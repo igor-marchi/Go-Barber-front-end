@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="App Demo" src="mobile/src/assets/images/logo@3x.png">
+  <img alt="App Demo" src="src/assets/logo.svg">
 </p>
 
 ## :rocket: Varcel Demo:
