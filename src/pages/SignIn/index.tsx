@@ -1,9 +1,11 @@
-import React, { useRef, useCallback, useContext } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { FiLogIn, FiMail, FiLock } from 'react-icons/fi';
 import { Form } from '@unform/web';
 import * as Yup from 'yup';
 import { FormHandles } from '@unform/core';
-import AuthContext from '../../context/AuthContext';
+import { Link, useHistory } from 'react-router-dom';
+import { useAuth } from '../../hooks/Auth';
+import { useToast } from '../../hooks/Toast';
 
 import getValidationErrors from '../../utils/getValidationErrors';
 import LogoImg from '../../assets/logo.svg';
@@ -11,21 +13,29 @@ import LogoImg from '../../assets/logo.svg';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 
-import { Container, Content, Background } from './styles';
+import {
+  Container, Content, AnimationContainer, Background,
+} from './styles';
+
+interface SingInFormData {
+  email: string,
+  password: string,
+}
 
 const SignIn: React.FC = () => {
   const formRef = useRef<FormHandles>(null);
 
-  const { name } = useContext(AuthContext);
+  const { user, signIn } = useAuth();
+  const { addToast } = useToast();
+  const history = useHistory();
 
-  console.log(name);
+  console.log(user);
 
-  const handleSubmit = useCallback(async (data: Record<string, unknown>) => {
+  const handleSubmit = useCallback(async (data: SingInFormData) => {
     try {
       formRef.current?.setErrors({});
 
       const schema = Yup.object().shape({
-        name: Yup.string().required('Nome obrigatório'),
         email: Yup.string().required('E-mail obrigatório').email('Digite um e-mail válido'),
         password: Yup.string().required('Senha obrigatória'),
       });
@@ -33,36 +43,53 @@ const SignIn: React.FC = () => {
       await schema.validate(data, {
         abortEarly: false,
       });
+
+      await signIn({
+        email: data.email,
+        password: data.password,
+      });
+
+      history.push('/dashboard');
     } catch (err) {
-      console.log(err);
+      if (err instanceof Yup.ValidationError) {
+        const errors = getValidationErrors(err);
+        formRef.current?.setErrors(errors);
 
-      const errors = getValidationErrors(err);
+        return;
+      }
 
-      formRef.current?.setErrors(errors);
+      addToast({
+        type: 'error',
+        title: 'Erro na autenticação',
+        description: 'Ocorre um erro ao fazer login, cheque as credenciais.',
+      });
     }
-  }, []);
+  }, [signIn, addToast, history]);
   return (
     <Container>
       <Content>
-        <img src={LogoImg} alt="GoBarber LOGO" />
+        <AnimationContainer>
+          <img src={LogoImg} alt="GoBarber LOGO" />
 
-        <Form ref={formRef} onSubmit={handleSubmit}>
-          <h1>Faça sou login</h1>
+          <Form ref={formRef} onSubmit={handleSubmit}>
+            <h1>Faça sou login</h1>
 
-          <Input name="email" icon={FiMail} placeholder="E-mail" />
-          <Input name="password" icon={FiLock} type="password" placeholder="Senha" />
+            <Input name="email" icon={FiMail} placeholder="E-mail" />
+            <Input name="password" icon={FiLock} type="password" placeholder="Senha" />
 
-          <Button type="submit">Entrar</Button>
+            <Button type="submit">Entrar</Button>
 
-          <a href="forgot">Esqueci minha senha.</a>
-        </Form>
+            <a href="forgot">Esqueci minha senha.</a>
+          </Form>
 
-        <a href="Login">
-          <FiLogIn />
-          Criar conta
+          <Link to="/signup">
+            <FiLogIn />
+            Criar conta
 
-        </a>
+          </Link>
+        </AnimationContainer>
       </Content>
+
       <Background />
     </Container>
   );
